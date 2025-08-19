@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bitlayer 空投计算器</title>
+  <meta name="theme-color" content="#0B0F14" />
+  <link rel="icon" href="./assets/logo.png">
+  <style>
+    :root {
+      --bg: #0B0F14;
+      --card: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.10);
+      --text: #e6edf3;
+      --muted: rgba(255,255,255,0.65);
+      --accent: #F47D1F;
+      --accent2: #FFC78A;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: #fff;
+      line-height: 1.6;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+    }
+    .container { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 42px; height: 42px; border-radius: 9999px; border: 1px solid var(--border); box-shadow: 0 8px 30px rgba(244,125,31,0.2); }
+    h1 { margin: 0; font-size: 28px; letter-spacing: 0.2px; }
+    .sub { color: var(--muted); margin-top: 2px; font-size: 14px; }
+    .btn { background: transparent; border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 12px; cursor: pointer; }
+    .btn:hover { background: rgba(255,255,255,0.07); }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 24px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+    .label { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 600; }
+    .tooltip { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 12px 0; }
+    .row input[type="number"] { width: 230px; max-width: 100%; background: rgba(0,0,0,0.35); border: 1px solid var(--border); color: #fff; border-radius: 12px; padding: 10px 12px; font-size: 14px; outline: none; }
+    .row input[type="number"]:focus { border-color: #F47D1F88; box-shadow: 0 0 0 3px rgba(244,125,31,0.25); }
+    .suffix { margin-left: 6px; font-size: 13px; color: rgba(255,255,255,0.7); }
+    .section-title { color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 8px; }
+    .big { color: var(--accent); font-size: 28px; font-weight: 800; letter-spacing: .2px; }
+    .stats { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+    @media (min-width: 600px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .stat .title { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .stat .value { margin-top: 6px; font-weight: 700; color: var(--accent); }
+    .stat .hint { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.55); }
+    .two { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 600px) { .two { grid-template-columns: 1fr 1fr; } }
+    .footer-note { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 8px; }
+    .controls { display: flex; gap: 8px; }
+    .hidden { display: none; }
+    .glow { position: fixed; left: 50%; bottom: -120px; transform: translateX(-50%); width: 760px; height: 220px; background: radial-gradient(60% 60% at 50% 40%, rgba(244,125,31,0.3), transparent 70%); filter: blur(48px); opacity: .45; pointer-events: none; }
+    /* Gate overlay */
+    #right-col { position: relative; }
+    #gate { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 20px; }
+    #gate.active { display: flex; }
+    .gate-box { max-width: 560px; width: 100%; background: rgba(9,12,18,0.9); border: 1px solid var(--border); border-radius: 16px; padding: 18px; text-align: center; backdrop-filter: blur(6px); }
+    .gate-title { font-weight: 800; font-size: 18px; margin-bottom: 6px; }
+    .gate-desc { color: var(--muted); font-size: 14px; }
+    .gate-actions { margin-top: 14px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary { background: linear-gradient(135deg,#F47D1F,#FFC78A); border: none; color: #1d1d1d; font-weight: 700; }
+    .btn-primary:hover { filter: brightness(1.05); }
+    .blurred { filter: blur(5px); pointer-events: none; user-select: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <img class="brand-logo" src="./assets/logo.png" alt="Logo" />
+        <div>
+          <h1>Bitlayer 空投计算器</h1>
+          <div class="sub">深色基底 + 橙色高亮 · 布局与以往一致</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="btn-advanced" class="btn">高级设置</button>
+        <button id="btn-reset" class="btn">重置</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="label">宝石数量</div>
+              <div class="tooltip">按 <span id="hint-gemprice"></span> / 颗 计价（可在高级设置修改）</div>
+            </div>
+            <div>
+              <input id="in-gems" type="number" step="any" min="0" placeholder="0" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">积分数量</div>
+              <div class="tooltip">你账户当前的积分</div>
+            </div>
+            <div>
+              <input id="in-points" type="number" step="any" min="0" placeholder="0" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">BTR 数量</div>
+              <div class="tooltip">用于参与或锁仓的 BTR（仅用于 BTR 奖励池分配）</div>
+            </div>
+            <div>
+              <input id="in-btr" type="number" step="any" min="0" placeholder="0" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">赛车奖励</div>
+              <div class="tooltip">直接输入你拿到的赛车奖励（USD）</div>
+            </div>
+            <div>
+              <input id="in-raceusd" type="number" step="any" min="0" placeholder="0" />
+              <span class="suffix">USD</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="advanced" class="card hidden">
+          <div class="label" style="color:var(--accent);">高级设置</div>
+
+          <div class="row">
+            <div>
+              <div class="label">TGE FDV</div>
+              <div class="tooltip">单位：USD</div>
+            </div>
+            <div><input id="in-fdv" type="number" step="any" min="0" /></div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">空投比例</div>
+              <div class="tooltip">空投总额占 FDV 的百分比</div>
+            </div>
+            <div>
+              <input id="in-airdropPct" type="number" step="0.1" min="0" max="100" />
+              <span class="suffix">%</span>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">全网积分总量</div>
+              <div class="tooltip">默认 2.85 亿</div>
+            </div>
+            <div><input id="in-totalPoints" type="number" step="any" min="0" /></div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">宝石单价</div>
+              <div class="tooltip">默认 0.0025 USD/颗</div>
+            </div>
+            <div><input id="in-gemPrice" type="number" step="any" min="0" /></div>
+          </div>
+
+          <div class="two">
+            <div class="row">
+              <div>
+                <div class="label">积分池权重</div>
+                <div class="tooltip">三池分配：积分</div>
+              </div>
+              <div>
+                <input id="in-poolPoints" type="number" step="any" min="0" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <div class="label">BTR 池权重</div>
+                <div class="tooltip">三池分配：BTR</div>
+              </div>
+              <div>
+                <input id="in-poolBtr" type="number" step="any" min="0" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <div class="label">赛车池权重</div>
+                <div class="tooltip">三池分配：赛车（信息展示用，个人赛车奖励按 USD 直接输入）</div>
+              </div>
+              <div>
+                <input id="in-poolRace" type="number" step="any" min="0" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="label">全网 BTR 参与量</div>
+              <div class="tooltip">用于计算你在 BTR 奖励池中的占比</div>
+            </div>
+            <div><input id="in-globalBtr" type="number" step="any" min="0" /></div>
+          </div>
+
+          <div class="tooltip">说明：三池权重会自动归一化（不必精确等于 100%）。</div>
+        </div>
+      </div>
+
+      <div id="right-col">
+        <div id="results-area">
+          <div class="card">
+            <div class="section-title">总空投池（估值）</div>
+            <div id="out-airdropPoolUSD" class="big">$0.00</div>
+
+            <div class="stats">
+              <div class="stat">
+                <div class="title">积分池</div>
+                <div id="out-pointsPoolUSD" class="value">$0.00</div>
+                <div id="hint-weightP" class="hint">权重 0%</div>
+              </div>
+              <div class="stat">
+                <div class="title">BTR 池</div>
+                <div id="out-btrPoolUSD" class="value">$0.00</div>
+                <div id="hint-weightB" class="hint">权重 0%</div>
+              </div>
+              <div class="stat">
+                <div class="title">赛车池</div>
+                <div id="out-racePoolUSD" class="value">$0.00</div>
+                <div id="hint-weightR" class="hint">权重 0%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="two">
+            <div class="stat">
+              <div class="title">1 积分的预测价值</div>
+              <div id="out-perPoint" class="value">$0.00</div>
+              <div id="hint-fdvpoints" class="hint"></div>
+            </div>
+            <div class="stat">
+              <div class="title">宝石单价</div>
+              <div id="out-gemPrice" class="value">$0.0025</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">我的空投估值</div>
+            <div id="out-myTotal" class="big">$0.00</div>
+
+            <div class="stats" style="grid-template-columns: repeat(4, 1fr); gap: 12px;">
+              <div class="stat">
+                <div class="title">积分贡献</div>
+                <div id="out-myPoints" class="value">$0.00</div>
+              </div>
+              <div class="stat">
+                <div class="title">BTR 贡献</div>
+                <div id="out-myBtr" class="value">$0.00</div>
+                <div id="hint-btrshare" class="hint"></div>
+              </div>
+              <div class="stat">
+                <div class="title">赛车贡献</div>
+                <div id="out-myRace" class="value">$0.00</div>
+                <div id="hint-race" class="hint"></div>
+              </div>
+              <div class="stat">
+                <div class="title">宝石价值</div>
+                <div id="out-myGem" class="value">$0.00</div>
+                <div id="hint-gems" class="hint"></div>
+              </div>
+            </div>
+
+            <div class="footer-note">我的非宝石空投占比：<span id="out-airdropShare">0%</span></div>
+          </div>
+
+          <div class="footer-note">说明：本工具基于可调参数进行估算，仅供参考，不代表官方分配。</div>
+        </div>
+
+        <!-- GATE OVERLAY -->
+        <div id="gate" class="active">
+          <div class="gate-box">
+            <div class="gate-title">🔒 结果已隐藏</div>
+            <div class="gate-desc">请先关注我的推特 <strong>@menglayer</strong>，然后点击下方按钮解锁计算结果。</div>
+            <div class="gate-actions">
+              <a id="btn-open-x" class="btn btn-primary" href="https://x.com/menglayer" target="_blank" rel="noopener noreferrer">去关注 @menglayer</a>
+              <button id="btn-unlock" class="btn">我已关注，显示结果</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glow"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const nfUSD2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+    const nfUSD6 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 6 });
+    const nfi0 = new Intl.NumberFormat('en-US');
+    function toNum(v){ if(v === null || v === undefined) return 0; const n = Number(String(v).replace(/,/g,'')); return Number.isFinite(n) ? n : 0; }
+
+    const state = {
+      gems: 0, points: 0, btr: 0, raceUSD: 0,
+      fdv: 200000000, airdropPct: 10, totalPoints: 285000000, gemPrice: 0.0025,
+      poolPoints: 70, poolBtr: 20, poolRace: 10, globalBtr: 100000000,
+    };
+
+    const inputs = {
+      gems: $('in-gems'), points: $('in-points'), btr: $('in-btr'), raceUSD: $('in-raceusd'),
+      fdv: $('in-fdv'), airdropPct: $('in-airdropPct'), totalPoints: $('in-totalPoints'),
+      gemPrice: $('in-gemPrice'), poolPoints: $('in-poolPoints'), poolBtr: $('in-poolBtr'),
+      poolRace: $('in-poolRace'), globalBtr: $('in-globalBtr'),
+    };
+
+    function syncUI(){
+      inputs.fdv.value = state.fdv;
+      inputs.airdropPct.value = state.airdropPct;
+      inputs.totalPoints.value = state.totalPoints;
+      inputs.gemPrice.value = state.gemPrice;
+      inputs.poolPoints.value = state.poolPoints;
+      inputs.poolBtr.value = state.poolBtr;
+      inputs.poolRace.value = state.poolRace;
+      inputs.globalBtr.value = state.globalBtr;
+      $('out-gemPrice').textContent = nfUSD6.format(state.gemPrice);
+      $('hint-gemprice').textContent = nfUSD6.format(state.gemPrice);
+    }
+
+    function recalc(){
+      state.gems = toNum(inputs.gems.value);
+      state.points = toNum(inputs.points.value);
+      state.btr = toNum(inputs.btr.value);
+      state.raceUSD = Math.max(0, toNum(inputs.raceUSD.value));
+
+      state.fdv = toNum(inputs.fdv.value);
+      state.airdropPct = toNum(inputs.airdropPct.value);
+      state.totalPoints = toNum(inputs.totalPoints.value);
+      state.gemPrice = toNum(inputs.gemPrice.value);
+      state.poolPoints = toNum(inputs.poolPoints.value);
+      state.poolBtr = toNum(inputs.poolBtr.value);
+      state.poolRace = toNum(inputs.poolRace.value);
+      state.globalBtr = toNum(inputs.globalBtr.value);
+
+      const airdropPoolUSD = state.fdv * (state.airdropPct/100);
+      const sum = (state.poolPoints + state.poolBtr + state.poolRace) || 1;
+      const wP = state.poolPoints / sum;
+      const wB = state.poolBtr / sum;
+      const wR = state.poolRace / sum;
+
+      const pointsPoolUSD = airdropPoolUSD * wP;
+      const btrPoolUSD = airdropPoolUSD * wB;
+      const racePoolUSD = airdropPoolUSD * wR;
+
+      const perPointUSD = state.totalPoints > 0 ? pointsPoolUSD / state.totalPoints : 0;
+
+      const myPointsUSD = state.points * perPointUSD;
+      const myBtrShare = state.globalBtr > 0 ? state.btr / state.globalBtr : 0;
+      const myBtrUSD = btrPoolUSD * myBtrShare;
+      const myRaceUSD = state.raceUSD; // 直接以 USD 输入
+      const myGemUSD = state.gems * state.gemPrice;
+
+      const myTotalUSD = myPointsUSD + myBtrUSD + myRaceUSD + myGemUSD;
+      const myAirdropShare = airdropPoolUSD>0 ? (myPointsUSD + myBtrUSD + myRaceUSD) / airdropPoolUSD : 0;
+
+      $('out-airdropPoolUSD').textContent = nfUSD2.format(airdropPoolUSD);
+      $('out-pointsPoolUSD').textContent = nfUSD2.format(pointsPoolUSD);
+      $('out-btrPoolUSD').textContent = nfUSD2.format(btrPoolUSD);
+      $('out-racePoolUSD').textContent = nfUSD2.format(racePoolUSD);
+
+      $('hint-weightP').textContent = '权重 ' + (wP*100).toFixed(1) + '%';
+      $('hint-weightB').textContent = '权重 ' + (wB*100).toFixed(1) + '%';
+      $('hint-weightR').textContent = '权重 ' + (wR*100).toFixed(1) + '%';
+
+      $('out-perPoint').textContent = nfUSD2.format(perPointUSD);
+      $('hint-fdvpoints').textContent = 'FDV ' + nfUSD2.format(state.fdv) + ' · 积分总量 ' + nfi0.format(state.totalPoints);
+
+      $('out-myPoints').textContent = nfUSD2.format(myPointsUSD);
+      $('out-myBtr').textContent = nfUSD2.format(myBtrUSD);
+      $('out-myRace').textContent = nfUSD2.format(myRaceUSD);
+      $('out-myGem').textContent = nfUSD2.format(myGemUSD);
+      $('out-myTotal').textContent = nfUSD2.format(myTotalUSD);
+
+      $('out-airdropShare').textContent = (myAirdropShare*100).toFixed(4) + '%';
+      $('hint-btrshare').textContent = state.globalBtr>0 ? ('你的占比 ' + (myBtrShare*100).toFixed(4) + '%') : '';
+      $('hint-race').textContent = '金额 ' + nfUSD2.format(state.raceUSD);
+      $('hint-gems').textContent = nfi0.format(state.gems) + ' 颗';
+    }
+
+    function bind(){
+      Object.values(inputs).forEach(el=>{
+        el.addEventListener('input', recalc);
+        el.addEventListener('change', recalc);
+      });
+      $('btn-advanced').addEventListener('click', ()=>{
+        const adv = $('advanced');
+        adv.classList.toggle('hidden');
+        $('btn-advanced').textContent = adv.classList.contains('hidden') ? '高级设置' : '收起高级设置';
+      });
+      $('btn-reset').addEventListener('click', ()=>{
+        inputs.gems.value = '';
+        inputs.points.value = '';
+        inputs.btr.value = '';
+        inputs.raceUSD.value = '';
+
+        inputs.fdv.value = 200000000;
+        inputs.airdropPct.value = 10;
+        inputs.totalPoints.value = 285000000;
+        inputs.gemPrice.value = 0.0025;
+        inputs.poolPoints.value = 70;
+        inputs.poolBtr.value = 20;
+        inputs.poolRace.value = 10;
+        inputs.globalBtr.value = 100000000;
+        syncUI();
+        recalc();
+      });
+
+      // Gate
+      const gate = $('gate');
+      const resultsArea = $('results-area');
+      function updateGate(){
+        const ok = localStorage.getItem('follow_ok') === '1';
+        if(ok){ gate.classList.remove('active'); resultsArea.classList.remove('blurred'); }
+        else { gate.classList.add('active'); resultsArea.classList.add('blurred'); }
+      }
+      updateGate();
+      $('btn-unlock').addEventListener('click', ()=>{
+        localStorage.setItem('follow_ok','1');
+        updateGate();
+      });
+      $('btn-open-x').addEventListener('click', ()=>{
+        // keep gate, user will click unlock after following
+      });
+    }
+
+    syncUI();
+    bind();
+    recalc();
+  </script>
+</body>
+</html>
